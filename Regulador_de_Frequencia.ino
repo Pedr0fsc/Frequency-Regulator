@@ -3,30 +3,30 @@
 // Frequência mostrada em 4 displays de 7 segmentos
 
 // Definição dos pinos
-const int POT_PIN = A0;           // Potenciômetro
-const int BUZZER_PIN = A1;        // Buzzer passivo
-const int BOTAO_PIN = 9;          // Botão liga/desliga buzzer
+const int potenciometro = A0;           // Potenciômetro
+const int buzzer = A1;        // Buzzer passivo
+const int botao = 9;          // Botão liga/desliga buzzer
 
 // Pinos dos displays (cátodo comum)
-const int DISPLAY_UNIDADE = 13;   // Display das unidades
-const int DISPLAY_DEZENA = 12;    // Display das dezenas  
-const int DISPLAY_CENTENA = 11;   // Display das centenas
-const int DISPLAY_MILHAR = 10;    // Display dos milhares
+const int display_unidade = 13;   // Display das unidades
+const int display_dezena = 12;    // Display das dezenas  
+const int display_centena = 11;   // Display das centenas
+const int display_milhar = 10;    // Display dos milhares
 
 // Pinos dos segmentos (A, B, C, D, E, F, G)
-const int SEGMENTO_A = 2;
-const int SEGMENTO_B = 3;
-const int SEGMENTO_C = 4;
-const int SEGMENTO_D = 5;
-const int SEGMENTO_E = 6;
-const int SEGMENTO_F = 7;
-const int SEGMENTO_G = 8;
+const int segmento_A = 2;
+const int segmento_B = 3;
+const int segmento_C = 4;
+const int segmento_D = 5;
+const int segmento_E = 6;
+const int segmento_F = 7;
+const int segmento_G = 8;
 
 // Array com os pinos dos displays
-int displays[] = {DISPLAY_MILHAR, DISPLAY_CENTENA, DISPLAY_DEZENA, DISPLAY_UNIDADE};
+int displays[] = {display_milhar, display_centena, display_dezena, display_unidade};
 
 // Array com os pinos dos segmentos
-int segmentos[] = {SEGMENTO_A, SEGMENTO_B, SEGMENTO_C, SEGMENTO_D, SEGMENTO_E, SEGMENTO_F, SEGMENTO_G};
+int segmentos[] = {segmento_A, segmento_B, segmento_C, segmento_D, segmento_E, segmento_F, segmento_G};
 
 // Padrões para cada dígito (0-9) nos 7 segmentos
 // Ordem: A, B, C, D, E, F, G (1 = aceso, 0 = apagado)
@@ -46,7 +46,6 @@ bool digitos[10][7] = {
 // Variáveis globais
 int frequencia = 100;
 int frequenciaAnterior = 0;
-unsigned long ultimoTempo = 0;
 unsigned long ultimaLeitura = 0;
 int displayAtual = 0;
 
@@ -69,12 +68,10 @@ void setup() {
   }
   
   // Configurar pino do buzzer
-  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(buzzer, OUTPUT);
   
   // Configurar pino do botão (sem pull-up interno)
-  pinMode(BOTAO_PIN, INPUT);
-  
-  Serial.begin(9600); // Para debug (opcional)
+  pinMode(botao, INPUT);
 }
 
 void loop() {
@@ -83,7 +80,7 @@ void loop() {
   
   // Ler potenciômetro apenas a cada 50ms para estabilizar
   if(millis() - ultimaLeitura > 50) {
-    int valorPot = analogRead(POT_PIN);
+    int valorPot = analogRead(potenciometro);
     int novaFrequencia = map(valorPot, 0, 1023, 100, 5000);
     
     // Aplicar filtro simples para evitar oscilações
@@ -97,24 +94,15 @@ void loop() {
   // Atualizar buzzer apenas quando frequência mudar E estiver ligado
   if(frequencia != frequenciaAnterior) {
     if(buzzerLigado) {
-      tone(BUZZER_PIN, frequencia);
+      tone(buzzer, frequencia);
     } else {
-      noTone(BUZZER_PIN);
+      noTone(buzzer);
     }
     frequenciaAnterior = frequencia;
   }
   
   // Atualizar displays (multiplexação rápida)
   atualizarDisplays();
-  
-  // Debug no monitor serial (opcional)
-  if(millis() - ultimoTempo > 500) {
-    Serial.print("Frequência: ");
-    Serial.print(frequencia);
-    Serial.print(" Hz - Buzzer: ");
-    Serial.println(buzzerLigado ? "LIGADO" : "DESLIGADO");
-    ultimoTempo = millis();
-  }
 }
 
 void atualizarDisplays() {
@@ -166,33 +154,19 @@ void atualizarDisplays() {
   }
 }
 
-// Função para verificar o botão liga/desliga (VERSÃO SIMPLES)
+// Função para verificar o botão liga/desliga
 void verificarBotao() {
-  bool botaoAtual = digitalRead(BOTAO_PIN);
-  
-  // Debug simples
-  static unsigned long ultimoDebug = 0;
-  if(millis() - ultimoDebug > 500) {
-    Serial.print("Pino 9: ");
-    Serial.print(botaoAtual ? "HIGH (5V)" : "LOW (0V)");
-    Serial.print(" | Buzzer: ");
-    Serial.println(buzzerLigado ? "LIGADO" : "DESLIGADO");
-    ultimoDebug = millis();
-  }
+  bool botaoAtual = digitalRead(botao);
   
   // Detecção simples: se botão mudou para HIGH e passou 300ms
   if(botaoAtual == HIGH && botaoAnterior == LOW) {
     if(millis() - ultimoPressionamento > 300) {
       buzzerLigado = !buzzerLigado;
       
-      Serial.println("*** BOTÃO DETECTADO! ***");
-      
       if(buzzerLigado) {
-        tone(BUZZER_PIN, frequencia);
-        Serial.println("Buzzer LIGADO");
+        tone(buzzer, frequencia);
       } else {
-        noTone(BUZZER_PIN);
-        Serial.println("Buzzer DESLIGADO");
+        noTone(buzzer);
       }
       
       ultimoPressionamento = millis();
