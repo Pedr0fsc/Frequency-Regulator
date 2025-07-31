@@ -5,6 +5,7 @@
 // Definição dos pinos
 const int POT_PIN = A0;           // Potenciômetro
 const int BUZZER_PIN = A1;        // Buzzer passivo
+const int BOTAO_PIN = 9;          // Botão liga/desliga buzzer
 
 // Pinos dos displays (cátodo comum)
 const int DISPLAY_UNIDADE = 13;   // Display das unidades
@@ -49,6 +50,11 @@ unsigned long ultimoTempo = 0;
 unsigned long ultimaLeitura = 0;
 int displayAtual = 0;
 
+// Variáveis do botão
+bool buzzerLigado = false;
+bool botaoAnterior = false;
+unsigned long ultimoPressionamento = 0;
+
 void setup() {
   // Configurar pinos dos displays como saída
   for(int i = 0; i < 4; i++) {
@@ -65,10 +71,16 @@ void setup() {
   // Configurar pino do buzzer
   pinMode(BUZZER_PIN, OUTPUT);
   
+  // Configurar pino do botão (sem pull-up interno)
+  pinMode(BOTAO_PIN, INPUT);
+  
   Serial.begin(9600); // Para debug (opcional)
 }
 
 void loop() {
+  // Verificar botão liga/desliga
+  verificarBotao();
+  
   // Ler potenciômetro apenas a cada 50ms para estabilizar
   if(millis() - ultimaLeitura > 50) {
     int valorPot = analogRead(POT_PIN);
@@ -82,9 +94,13 @@ void loop() {
     ultimaLeitura = millis();
   }
   
-  // Atualizar buzzer apenas quando frequência mudar
+  // Atualizar buzzer apenas quando frequência mudar E estiver ligado
   if(frequencia != frequenciaAnterior) {
-    tone(BUZZER_PIN, frequencia);
+    if(buzzerLigado) {
+      tone(BUZZER_PIN, frequencia);
+    } else {
+      noTone(BUZZER_PIN);
+    }
     frequenciaAnterior = frequencia;
   }
   
@@ -95,7 +111,8 @@ void loop() {
   if(millis() - ultimoTempo > 500) {
     Serial.print("Frequência: ");
     Serial.print(frequencia);
-    Serial.println(" Hz");
+    Serial.print(" Hz - Buzzer: ");
+    Serial.println(buzzerLigado ? "LIGADO" : "DESLIGADO");
     ultimoTempo = millis();
   }
 }
@@ -147,4 +164,40 @@ void atualizarDisplays() {
   if(displayAtual >= 4) {
     displayAtual = 0;
   }
+}
+
+// Função para verificar o botão liga/desliga (VERSÃO SIMPLES)
+void verificarBotao() {
+  bool botaoAtual = digitalRead(BOTAO_PIN);
+  
+  // Debug simples
+  static unsigned long ultimoDebug = 0;
+  if(millis() - ultimoDebug > 500) {
+    Serial.print("Pino 9: ");
+    Serial.print(botaoAtual ? "HIGH (5V)" : "LOW (0V)");
+    Serial.print(" | Buzzer: ");
+    Serial.println(buzzerLigado ? "LIGADO" : "DESLIGADO");
+    ultimoDebug = millis();
+  }
+  
+  // Detecção simples: se botão mudou para HIGH e passou 300ms
+  if(botaoAtual == HIGH && botaoAnterior == LOW) {
+    if(millis() - ultimoPressionamento > 300) {
+      buzzerLigado = !buzzerLigado;
+      
+      Serial.println("*** BOTÃO DETECTADO! ***");
+      
+      if(buzzerLigado) {
+        tone(BUZZER_PIN, frequencia);
+        Serial.println("Buzzer LIGADO");
+      } else {
+        noTone(BUZZER_PIN);
+        Serial.println("Buzzer DESLIGADO");
+      }
+      
+      ultimoPressionamento = millis();
+    }
+  }
+  
+  botaoAnterior = botaoAtual;
 }
